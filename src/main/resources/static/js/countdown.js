@@ -6,8 +6,6 @@ const celebrationPanelEl = document.getElementById("celebrationPanel");
 const cheerTrackEl = document.getElementById("cheerTrack");
 const progressTextEl = document.getElementById("progressText");
 const progressFillEl = document.getElementById("progressFill");
-const fireworksCanvas = document.getElementById("fireworksCanvas");
-const fireworksContext = fireworksCanvas.getContext("2d");
 
 const valueEls = {
     days: document.getElementById("days"),
@@ -19,8 +17,8 @@ const valueEls = {
 let targetTimeMs = null;
 let serverOffsetMs = 0;
 let celebrationMode = false;
-let fireworksStarted = false;
-let particles = [];
+let tickIntervalId = null;
+let refreshIntervalId = null;
 
 function renderMidnightSnapshot() {
     renderTimer(0);
@@ -62,7 +60,12 @@ function setCelebrationMode() {
     celebrationPanelEl.hidden = false;
     subtitleEl.textContent = "The countdown hit zero. FY 2025-2026 ended at exactly 2026-04-01 00:00:00 Asia/Kolkata.";
     renderMidnightSnapshot();
-    startFireworks();
+    if (tickIntervalId !== null) {
+        clearInterval(tickIntervalId);
+    }
+    if (refreshIntervalId !== null) {
+        clearInterval(refreshIntervalId);
+    }
 }
 
 function renderCheers(cheers) {
@@ -108,76 +111,6 @@ function syncWithServer(data) {
     }
 }
 
-function resizeFireworksCanvas() {
-    fireworksCanvas.width = window.innerWidth;
-    fireworksCanvas.height = window.innerHeight;
-}
-
-function createBurst() {
-    const x = Math.random() * fireworksCanvas.width;
-    const y = (Math.random() * fireworksCanvas.height * 0.45) + 40;
-    const palette = ["#ffb703", "#ff6b6b", "#7ae582", "#f7f1e8"];
-
-    for (let index = 0; index < 28; index += 1) {
-        const angle = (Math.PI * 2 * index) / 28;
-        const speed = 1.5 + Math.random() * 3.2;
-
-        particles.push({
-            x,
-            y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            alpha: 1,
-            size: 2 + Math.random() * 3,
-            color: palette[index % palette.length]
-        });
-    }
-}
-
-function animateFireworks() {
-    fireworksContext.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
-
-    particles = particles.filter((particle) => particle.alpha > 0.02);
-
-    particles.forEach((particle) => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.vy += 0.015;
-        particle.alpha *= 0.985;
-
-        fireworksContext.globalAlpha = particle.alpha;
-        fireworksContext.fillStyle = particle.color;
-        fireworksContext.beginPath();
-        fireworksContext.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        fireworksContext.fill();
-    });
-
-    fireworksContext.globalAlpha = 1;
-
-    if (celebrationMode) {
-        if (Math.random() < 0.08) {
-            createBurst();
-        }
-        requestAnimationFrame(animateFireworks);
-    } else {
-        fireworksContext.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
-        fireworksStarted = false;
-    }
-}
-
-function startFireworks() {
-    if (fireworksStarted) {
-        return;
-    }
-
-    fireworksStarted = true;
-    resizeFireworksCanvas();
-    for (let index = 0; index < 3; index += 1) {
-        createBurst();
-    }
-    requestAnimationFrame(animateFireworks);
-}
-
 async function loadCountdown() {
     try {
         const response = await fetch("/api/countdown", { cache: "no-store" });
@@ -221,8 +154,6 @@ function tick() {
     }
 }
 
-window.addEventListener("resize", resizeFireworksCanvas);
-
 loadCountdown();
-setInterval(tick, 1000);
-setInterval(loadCountdown, 30000);
+tickIntervalId = setInterval(tick, 1000);
+refreshIntervalId = setInterval(loadCountdown, 30000);
