@@ -6,6 +6,13 @@ const celebrationPanelEl = document.getElementById("celebrationPanel");
 const cheerTrackEl = document.getElementById("cheerTrack");
 const progressTextEl = document.getElementById("progressText");
 const progressFillEl = document.getElementById("progressFill");
+const FAKE_COUNTDOWN_MS = ((12 * 60) + 59) * 1000;
+const STATIC_CHEERS = [
+    "One last sprint before midnight.",
+    "Close the books. Raise the energy.",
+    "FY 2025-2026 deserves a proper sendoff.",
+    "Twelve o'clock turns the page to a new year."
+];
 
 const valueEls = {
     days: document.getElementById("days"),
@@ -23,7 +30,7 @@ let refreshIntervalId = null;
 function renderMidnightSnapshot() {
     renderTimer(0);
     progressFillEl.style.width = "100%";
-    progressTextEl.textContent = "100% of the final day completed";
+    progressTextEl.textContent = "Final cheer complete";
     targetTextEl.textContent = "2026-04-01 00:00:00 Asia/Kolkata";
     serverTimeEl.textContent = "01/04/2026, 00:00:00";
 }
@@ -83,47 +90,39 @@ function renderProgress(estimatedServerNowMs) {
         return;
     }
 
-    const dayStartMs = targetTimeMs - (24 * 60 * 60 * 1000);
-    const elapsed = Math.min(Math.max(estimatedServerNowMs - dayStartMs, 0), 24 * 60 * 60 * 1000);
-    const percentage = Math.round((elapsed / (24 * 60 * 60 * 1000)) * 100);
+    const countdownStartMs = targetTimeMs - FAKE_COUNTDOWN_MS;
+    const elapsed = Math.min(Math.max(estimatedServerNowMs - countdownStartMs, 0), FAKE_COUNTDOWN_MS);
+    const percentage = Math.round((elapsed / FAKE_COUNTDOWN_MS) * 100);
 
     progressFillEl.style.width = `${percentage}%`;
-    progressTextEl.textContent = `${percentage}% of the final day completed`;
+    progressTextEl.textContent = `${percentage}% of the fake midnight run completed`;
 }
 
 function syncWithServer(data) {
     titleEl.textContent = data.title;
-    subtitleEl.textContent = data.subtitle;
-    targetTextEl.textContent = data.targetDateTime.replace("T", " ");
-    serverTimeEl.textContent = data.serverDateTime.replace("T", " ");
+    subtitleEl.textContent = "Every visit starts a fresh 12:59 countdown to the midnight-style celebration.";
+    targetTextEl.textContent = "2026-04-01 00:00:00 Asia/Kolkata";
+    serverTimeEl.textContent = "01/04/2026, 00:00:00";
     renderCheers(data.cheers);
 
-    targetTimeMs = new Date(data.targetDateTime).getTime();
-    const serverNowMs = new Date(data.serverDateTime).getTime();
-    serverOffsetMs = serverNowMs - Date.now();
-    renderProgress(serverNowMs);
-
-    if (data.ended) {
-        renderMidnightSnapshot();
-        setCelebrationMode();
-    } else {
-        renderTimer(data.millisecondsRemaining);
-    }
+    const clientNowMs = Date.now();
+    targetTimeMs = clientNowMs + FAKE_COUNTDOWN_MS;
+    serverOffsetMs = 0;
+    renderTimer(FAKE_COUNTDOWN_MS);
+    renderProgress(clientNowMs);
 }
 
-async function loadCountdown() {
-    try {
-        const response = await fetch("/api/countdown", { cache: "no-store" });
-        if (!response.ok) {
-            throw new Error(`Countdown request failed with ${response.status}`);
-        }
+function initializeFakeCountdown() {
+    titleEl.textContent = "FY 2025-2026 Finale";
+    subtitleEl.textContent = "Every visit starts a fresh 12:59 countdown to the midnight-style celebration.";
+    targetTextEl.textContent = "2026-04-01 00:00:00 Asia/Kolkata";
+    serverTimeEl.textContent = "01/04/2026, 00:00:00";
+    renderCheers(STATIC_CHEERS);
 
-        const data = await response.json();
-        syncWithServer(data);
-    } catch (error) {
-        subtitleEl.textContent = "Could not load the server countdown. The page is still alive, but the API needs attention.";
-        console.error(error);
-    }
+    targetTimeMs = Date.now() + FAKE_COUNTDOWN_MS;
+    serverOffsetMs = 0;
+    renderTimer(FAKE_COUNTDOWN_MS);
+    renderProgress(Date.now());
 }
 
 function tick() {
@@ -136,16 +135,9 @@ function tick() {
 
     renderTimer(remainingMs);
     renderProgress(estimatedServerNowMs);
-    serverTimeEl.textContent = new Date(estimatedServerNowMs).toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-    });
+    const minutes = Math.floor(remainingMs / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
+    serverTimeEl.textContent = `00:00:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
     if (remainingMs === 0) {
         renderMidnightSnapshot();
@@ -154,6 +146,5 @@ function tick() {
     }
 }
 
-loadCountdown();
+initializeFakeCountdown();
 tickIntervalId = setInterval(tick, 1000);
-refreshIntervalId = setInterval(loadCountdown, 30000);
