@@ -14,7 +14,7 @@ public class CountdownController {
 
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
     private static final ZonedDateTime FY_END_TARGET =
-            ZonedDateTime.of(2026, 4, 1, 0, 0, 0, 0, INDIA_ZONE);
+            ZonedDateTime.of(2026, 4, 1, 0, 30, 0, 0, INDIA_ZONE);
 
     @GetMapping("/api/countdown")
     public CountdownResponse getCountdown() {
