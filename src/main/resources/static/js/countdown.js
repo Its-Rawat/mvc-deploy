@@ -22,6 +22,14 @@ let celebrationMode = false;
 let fireworksStarted = false;
 let particles = [];
 
+function renderMidnightSnapshot() {
+    renderTimer(0);
+    progressFillEl.style.width = "100%";
+    progressTextEl.textContent = "100% of the final day completed";
+    targetTextEl.textContent = "2026-04-01 00:00:00 Asia/Kolkata";
+    serverTimeEl.textContent = "01/04/2026, 00:00:00";
+}
+
 function formatPart(value) {
     return String(value).padStart(2, "0");
 }
@@ -53,6 +61,7 @@ function setCelebrationMode() {
     document.body.classList.add("celebration-mode");
     celebrationPanelEl.hidden = false;
     subtitleEl.textContent = "The countdown hit zero. FY 2025-2026 ended at exactly 2026-04-01 00:00:00 Asia/Kolkata.";
+    renderMidnightSnapshot();
     startFireworks();
 }
 
@@ -92,7 +101,7 @@ function syncWithServer(data) {
     renderProgress(serverNowMs);
 
     if (data.ended) {
-        renderTimer(0);
+        renderMidnightSnapshot();
         setCelebrationMode();
     } else {
         renderTimer(data.millisecondsRemaining);
@@ -206,7 +215,9 @@ function tick() {
     });
 
     if (remainingMs === 0) {
+        renderMidnightSnapshot();
         setCelebrationMode();
+        return;
     }
 }
 
