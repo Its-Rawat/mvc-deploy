@@ -22,14 +22,18 @@ public class UserServicesImplementation implements UserService {
     private ModelMapper modelMapper;
 
     @Override
-    public UserDtos createUser(UserDtos userDto) {
+    public List<UserDtos> createUser(List<UserDtos> userDto) {
+        userDto.forEach(user -> user.setUserId(UUID.randomUUID().toString()));
 
-        // generate user id using uuid
-        userDto.setUserId(UUID.randomUUID().toString());
+        List<Users> usersList = userDto.stream()
+                .map(userDtos -> dtoToEntities(userDtos))
+                .collect(Collectors.toList());
 
-        Users users = dtoToEntities(userDto);
-        Users savedUser = userRepository.save(users);
-        return entitiesToDtos(savedUser);
+        List<Users> savedUsers = userRepository.saveAll(usersList);
+
+        return savedUsers.stream()
+                .map(entity-> entitiesToDtos(entity))
+                .collect(Collectors.toList());
     }
 
     @Override
